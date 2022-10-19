@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 #Ryan Kantor
 #Fall 2022
-#Requires Python's Py launcher to be installed in order to run pdf-parser.py
+#Requires Python's Py launcher to be installed and to share a directory with Didier Stevens' pdf-parser.py
 
 import sys
 import os
 import io
 import subprocess
 
-def schedule(directory, stat_switch):
+def schedule(directory, stat_switch, allobjs, generics):
     output = ""
     outdict = {}
     searchdict = {}
@@ -19,7 +19,7 @@ def schedule(directory, stat_switch):
                 get_stats((directory+x),outdict, searchdict)
         else:
             if x.endswith(".pdf"):
-                output += extract_streams((directory+x),output)
+                output += extract_streams((directory+x),output, allobjs, generics)
     if stat_switch:
         render_stats(outdict, searchdict)
     else:
@@ -32,7 +32,9 @@ def render_stats(outdict, searchdict):
     for key,val in searchdict.items():
         print(key, ':', val)
 
-def extract_streams(filename, output):
+#this function now also retrieves objects on which the stream may depend such as fonts and font descriptors.
+def extract_streams(filename, output, allobjs, generics):
+    refdict = {}
     stats = subprocess.check_output(['py', '-2', 'pdf-parser.py', filename]).decode('utf-8')
     stats = io.StringIO(stats)
     line = stats.readline()
@@ -46,16 +48,32 @@ def extract_streams(filename, output):
             tokens = line.split()
             streamtype = ''
             if len(tokens) > 1:
-                streamtype = '<'+tokens[1]+'>'
+                streamtype = '<'+tokens[1]+'> '
             else:
-                streamtype = '</Unknown>'
-            stats.readline()
+                streamtype = '</UnknownStreamType> '
+            line = stats.readline()
+            tokens = line[:-2].split(':')[1].split(',')
+            #object num:object type
+            if not tokens[0] == ' ':
+                for i in range(0, len(tokens)):
+                    refnum = tokens[i].split()[0]
+                    if not (tokens[i] in refdict.keys()):
+                        refcontent = subprocess.check_output(['py', '-2', 'pdf-parser.py', '-o', refnum, filename]).decode('utf-8')
+                        refcontent = io.StringIO(refcontent)
+                        refcontent.readline()
+                        reftype = refcontent.readline().split()
+                        if len(reftype) > 1:
+                            refdict[tokens[i].strip()] = '{'+' '.join(reftype[1:])+'}'
+                        else:
+                            refdict[tokens[i].strip()] = '{/UnknownStreamType}'
             line = stats.readline()
             tokens = line.split()
             if len(tokens) < 2:
                 tokens.append('dummy')
                 tokens.append('dummy')
-            if tokens[0]+tokens[1] == 'Containsstream':
+            #the following conditional makes this program only parse out objects which contain streams
+            #unless allobjs is true
+            if allobjs or tokens[0]+tokens[1] == 'Containsstream':
                 output += streamtype
                 content = subprocess.check_output(['py', '-2', 'pdf-parser.py', '-f', '-o', num, '-c', filename]).decode('utf-8')
                 content = io.StringIO(content)
@@ -64,12 +82,28 @@ def extract_streams(filename, output):
                     line = content.readline()
                     tokens = line.split()
                     if len(tokens) < 1: tokens.append('dummy')
+                    if tokens[0] == '<<':
+                        carrotlevel = 1
+                        output += ' '.join(tokens) + ' '
+                        while carrotlevel > 0:
+                            line = content.readline()
+                            tokens = line.split()
+                            output += ' '.join(tokens) + ' '
+                            if '<<' in tokens:
+                                carrotlevel += 1
+                            if '>>' in tokens:
+                                carrotlevel -= 1
                     if tokens[0].startswith("'") and not line.startswith(" 'No filters'"): data = True
-                    if data: output += line
+                    if data: output += ' '.join(tokens)
                     #if tokens[-1][-1] == "'" and tokens[-1][-2] != "\\": data = False
                 content.close()
+            output += '\n\n'
         line = stats.readline()
     stats.close()
+    if generics:
+        for i in refdict:
+            print(i + ' = ' + refdict[i])
+            output = output.replace(i, refdict[i])
     return output
 
 def get_stats(filename, outdict, searchdict):
@@ -117,12 +151,24 @@ def main():
         print("Options:")
         print("    -d - directory: process all pdfs in a directory. Target must be a directory.")
         print("    -s - stats: show the stats of the target pdf(s).")
+        print("    -a - all objects: parse out objects which do not contain streams as well.")
+        print("    -g - generics: replaces explicit references to other objects with generic type identifiers.")
         quit()
     stat_switch = False
     if '-s' in sys.argv:
         stat_switch = True
+    else:
+        stat_switch = False
+    if '-a' in sys.argv:
+        allobjs = True
+    else:
+        allobjs = False
+    if '-g' in sys.argv:
+        generics = True
+    else:
+        generics = False
     if '-d' in sys.argv:
-        print(schedule(sys.argv[-1], stat_switch))
+        print(schedule(sys.argv[-1], stat_switch, allobjs, generics))
     else:
         if stat_switch:
             outdict = {}
@@ -131,7 +177,7 @@ def main():
             render_stats(outdict, searchdict)
         else:
             output = ""
-            print(extract_streams(sys.argv[-1], output))
+            print(extract_streams(sys.argv[-1], output, allobjs, generics))
 
 if __name__=="__main__":
     main()
