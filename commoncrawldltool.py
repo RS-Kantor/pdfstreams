@@ -10,6 +10,12 @@ import warc
 
 from clint.textui import progress
 
+def queue_index(indexdir):
+
+    for x in os.listdir(indexdir):
+        print("Searching for PDFs in "+indexdir+"\\"+x+"...")
+        find_pdfs(os.path.join(indexdir, x))
+
 def queue_paths(pathsgz):
     
     if not os.path.exists(".\warcs"):
@@ -40,6 +46,7 @@ def find_pdfs(indices):
         if 'pdf' in line:
             for i in line.split():
                 if 'crawl-data' in i:
+                    print("Downloading "+i[1:-2].split('/')[-1])
                     dl_file("https://data.commoncrawl.org/" + i[1:-2], os.path.join(".\warcs", i[1:-2].split('/')[-1]))
         line = indfile.readline()
 
@@ -69,10 +76,7 @@ def dl_file(dest, filename):
     return filename
 
 def main():
-
-    #dl_file(sys.argv[1], '.\crawldata\warc.paths.gz')
-    #queue_paths('.\crawldata\warc.paths.gz')
-    find_pdfs("cdx-00000.gz")
+    queue_index('.\indexes')
        
 if __name__=="__main__":
     main()
