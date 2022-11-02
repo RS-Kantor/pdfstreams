@@ -10,6 +10,18 @@ import warc
 
 from clint.textui import progress
 
+def queue_fromfile(indexfile):
+
+    if not os.path.exists(".\indexes"):
+        os.mkdir(".\indexes")
+
+    indices = gzip.open(indexfile)
+    line = indices.readline()
+    while len(line) > 0:
+        dl_file("https://data.commoncrawl.org/" + line.strip(), os.path.join(".\indexes", line.split('/')[-1].strip()))
+        line = indices.readline()
+    queue_index(".\indexes")
+
 def queue_index(indexdir):
 
     for x in os.listdir(indexdir):
@@ -76,7 +88,7 @@ def dl_file(dest, filename):
     return filename
 
 def main():
-    queue_index('.\indexes')
+    queue_fromfile('cc-index.paths.gz')
        
 if __name__=="__main__":
     main()
