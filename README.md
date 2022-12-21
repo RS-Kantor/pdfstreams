@@ -5,12 +5,15 @@ Firstly, note the following - I was knocking the rust off of my Python skills wh
 pdfstreams.py is a tool for breaking PDFs down into their individual components. A few relevant modes of operation are described below:
 
  -a - parse out all objects. (only stream objects are extracted by default)
+ 
  -g - processes extracted objects further; replaces references between objects with generic type identifiers so that parsed objects can be combined into new configurations easily.
+ 
  -r - includes extra data in the output which is necessary for recombination of parsed objects.
  
 For the purposes of this project, all of the above switches should generally be used when calling pdfstreams.py. Their inclusion as options rather than default functionality can be attributed to my having written the first few versions of this tool before fully making sense of its purpose.
 
  -d - process all PDFs in a directory. I have not implemented parallel processing at the time of writing, but I still find this option preferable to manually running this tool over and over again.
+ 
  -s - show the stats of all target PDFs as provided by pdf-parser.py. This functionality is only included as a way to run the former against multiple PDFs.
  
 Usage:
