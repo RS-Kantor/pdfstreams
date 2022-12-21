@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import os
 from io import BytesIO
 from shutil import copyfileobj
@@ -26,7 +27,7 @@ def parseone(fname):
                 outf.write(buf.read())
 
 def main():
-    directory = 'indexes'
+    directory = sys.argv[1]
     print("Reading in "+directory+"...")
     for x in os.listdir(directory):
         if x.split('.')[-1] == 'warc':

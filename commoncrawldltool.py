@@ -88,7 +88,7 @@ def dl_file(dest, filename):
     return filename
 
 def main():
-    queue_fromfile('cc-index.paths.gz')
+    queue_fromfile(sys.argv[1])
        
 if __name__=="__main__":
     main()
